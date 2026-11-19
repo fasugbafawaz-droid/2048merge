@@ -1,0 +1,264 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#090d19">
+<title>2048MERGE</title>
+<style>
+:root{--bg:#090d19;--panel:#121a2b;--panel2:#1b2740;--text:#f4f6ff;--muted:#8e9bb5;--accent:#9b7cff;--line:#34415c}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at 20% 10%,#25204b,transparent 35%),radial-gradient(circle at 90% 90%,#142c4b,transparent 35%),var(--bg);color:var(--text);font-family:Arial,sans-serif}
+button,input,select{font:inherit}
+button{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:10px 13px;border-radius:12px;font-weight:bold;cursor:pointer}
+button:active{transform:scale(.96)}
+button.primary{background:linear-gradient(135deg,#8b65ff,#5a45d5);border:0}
+button:disabled{opacity:.35}
+input,select{background:var(--panel2);color:var(--text);border:1px solid var(--line);padding:10px;border-radius:10px}
+#splash{position:fixed;inset:0;z-index:1000;background:radial-gradient(circle at center,#25204b,#090d19 65%);display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;transition:opacity .7s,visibility .7s}
+#splash.hide{opacity:0;visibility:hidden;pointer-events:none}
+.splash-logo{font-size:clamp(35px,10vw,58px);font-weight:1000;letter-spacing:-3px;text-shadow:0 0 25px #9877ff88}
+.splash-logo span{color:#a98bff}
+.splash-sub{letter-spacing:5px;font-size:10px;color:#a9a4c9;margin-top:8px}
+.splash-tiles{display:flex;gap:9px;margin:38px 0}
+.splash-tile{width:53px;height:53px;border-radius:12px;background:#31275c;display:grid;place-items:center;font-weight:900;font-size:23px;box-shadow:0 0 20px #9977ff33;animation:tile 1.2s infinite alternate}
+.splash-tile:nth-child(2){animation-delay:.2s;background:#59449a}
+.splash-tile:nth-child(3){animation-delay:.4s;background:#8864dc}
+.splash-tile:nth-child(4){animation-delay:.6s;background:#b394ff;color:#191329}
+@keyframes tile{to{transform:translateY(-13px) rotate(5deg);box-shadow:0 12px 30px #9877ff66}}
+.loading-track{width:210px;height:6px;border-radius:20px;background:#29344b;overflow:hidden;margin-top:12px}
+.loading-bar{height:100%;width:0;background:linear-gradient(90deg,#7652ff,#c1aaff);border-radius:20px;animation:load 2.3s ease forwards}
+@keyframes load{to{width:100%}}
+#loadingText{font-size:11px;color:#aaa4c9;margin-top:12px;letter-spacing:2px}
+#enterGame{margin-top:24px;display:none;padding:13px 28px}
+.app{max-width:850px;margin:auto;padding:16px 13px 35px}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:18px}
+.logo{font-size:25px;font-weight:1000;letter-spacing:-1px}.logo span{color:var(--accent)}
+.small{font-size:11px;color:var(--muted);letter-spacing:2px}
+.profile{display:flex;align-items:center;gap:8px}
+.avatar{width:37px;height:37px;border-radius:12px;background:#30275c;display:grid;place-items:center}
+.panel{background:#121a2bef;border:1px solid #ffffff12;border-radius:19px;padding:14px;margin-bottom:13px;box-shadow:0 12px 35px #0003}
+.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:13px}
+.stat{background:var(--panel2);border-radius:13px;padding:11px;text-align:center}
+.stat small{display:block;color:var(--muted);font-size:10px;margin-bottom:5px}.stat strong{font-size:20px}
+.muted{color:var(--muted);font-size:12px}
+.badge{display:inline-block;background:#382c65;color:#cbbcff;padding:5px 9px;border-radius:20px;font-size:10px}
+.modes{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.modes button{font-size:11px;padding:10px 4px}
+.modes button.active{border-color:var(--accent);background:#392b70}
+.board-wrap{position:relative;max-width:520px;margin:auto}
+.board{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;padding:10px;background:#080e1c;border:1px solid #ffffff16;border-radius:17px;touch-action:none;user-select:none}
+.cell{aspect-ratio:1;background:#1a263c;border-radius:11px;display:grid;place-items:center;font-weight:900;font-size:clamp(19px,6vw,34px);color:white;overflow:hidden}
+.cell.v2{background:#eee4da;color:#51483f}.cell.v4{background:#ede0c8;color:#51483f}
+.cell.v8{background:#f2ae70}.cell.v16{background:#f18b59}.cell.v32{background:#ed7154}.cell.v64{background:#e95338}
+.cell.v128{background:#e9ce65;color:#263044}.cell.v256{background:#e9c54b;color:#263044}
+.cell.v512{background:#d9b53c;color:#263044}.cell.v1024{background:#b79aff;color:#17152b}
+.cell.v2048{background:#9b7cff;color:white;box-shadow:0 0 20px #9b7cff88}
+.cell.high{background:#354d83}
+.overlay{position:absolute;inset:0;background:#080d1ddd;border-radius:17px;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;backdrop-filter:blur(5px)}
+.overlay.show{display:flex}
+.toolbar{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.toolbar button{font-size:12px;padding:12px 5px}
+.progress{height:8px;background:#29344b;border-radius:20px;overflow:hidden}
+.progress div{height:100%;background:linear-gradient(90deg,#8d67ff,#55e6a5);width:0%;transition:.3s}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.item{background:var(--panel2);padding:11px;border-radius:12px;font-size:12px}
+.item strong{display:block;margin-bottom:5px}
+.item button{margin-top:8px;width:100%;font-size:11px}
+#message{text-align:center;min-height:20px;color:#55e6a5;font-size:12px;margin-top:9px}
+footer{text-align:center;color:var(--muted);font-size:10px;margin-top:20px}
+@media(min-width:600px){.game-layout{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;align-items:start}}
+@media(max-width:380px){.app{padding:12px 8px}.toolbar{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<div id="splash">
+ <div style="font-size:12px;letter-spacing:4px;color:#a99bdb;margin-bottom:18px">WELCOME TO</div>
+ <div class="splash-logo">2048<span>MERGE</span></div>
+ <div class="splash-sub">ULTIMATE EDITION</div>
+ <div class="splash-tiles">
+  <div class="splash-tile">2</div><div class="splash-tile">4</div>
+  <div class="splash-tile">8</div><div class="splash-tile">16</div>
+ </div>
+ <div style="font-size:12px;color:#aaa4c9">PREPARING YOUR GAME</div>
+ <div class="loading-track"><div class="loading-bar"></div></div>
+ <div id="loadingText">LOADING 0%</div>
+ <button id="enterGame" class="primary">START GAME</button>
+</div>
+
+<div class="app" id="mainApp" style="visibility:hidden">
+<header>
+ <div><div class="logo">2048<span>MERGE</span></div><div class="small">ULTIMATE EDITION</div></div>
+ <div class="profile"><div class="avatar">👤</div><div><strong id="playerLabel">Player</strong><div class="muted">LEVEL <span id="levelTop">1</span></div></div></div>
+</header>
+<div class="stats">
+ <div class="stat"><small>SCORE</small><strong id="score">0</strong></div>
+ <div class="stat"><small>BEST SCORE</small><strong id="best">0</strong></div>
+ <div class="stat"><small>TIME</small><strong id="timer">∞</strong></div>
+</div>
+<div class="panel">
+ <div class="row between"><div><strong id="modeTitle">CLASSIC MODE</strong><div class="muted" id="modeDescription">Merge tiles and reach 2048.</div></div><span class="badge" id="boardBadge">4 × 4</span></div>
+ <div class="modes" style="margin-top:12px">
+  <button class="active" data-mode="classic">CLASSIC</button><button data-mode="time">TIME ATTACK</button><button data-mode="two">2 PLAYERS</button><button data-mode="daily">DAILY</button>
+ </div>
+ <div class="row" style="margin-top:12px"><label class="muted">BOARD</label><select id="sizeSelect"><option value="4">4 × 4</option><option value="5">5 × 5</option></select><button class="primary" id="newGame">NEW GAME</button></div>
+</div>
+
+<div class="game-layout">
+<div>
+ <div class="panel">
+  <div class="row between" style="margin-bottom:10px"><strong id="turnLabel">YOUR TURN</strong><span class="muted" id="comboLabel">Combo ×0</span></div>
+  <div class="board-wrap">
+   <div class="board" id="board"></div>
+   <div class="overlay" id="overlay"><div style="font-size:42px" id="resultIcon">🏆</div><h2 id="resultTitle">2048!</h2><p class="muted" id="resultText"></p><button class="primary" id="playAgain">PLAY AGAIN</button></div>
+  </div>
+  <div id="message"></div>
+  <div class="toolbar">
+   <button id="undoBtn">↶ UNDO</button><button id="hintBtn">💡 HINT</button><button id="soundBtn">🔊 SOUND ON</button><button id="musicBtn">♫ MUSIC OFF</button>
+  </div>
+  <div class="toolbar">
+   <button id="removeBtn">✖ REMOVE TILE</button><button id="shuffleBtn">🔀 SHUFFLE</button><button id="pauseBtn">Ⅱ PAUSE</button><button id="restartBtn">↻ RESTART</button>
+  </div>
+  <p class="muted" style="text-align:center">Swipe the board or use your keyboard arrow keys.</p>
+ </div>
+ <div class="panel">
+  <strong>PLAYER PROGRESS</strong>
+  <div class="row between" style="margin-top:9px"><strong id="levelText">Level 1</strong><span class="muted" id="xpText">0 / 100 XP</span></div>
+  <div class="progress" style="margin-top:9px"><div id="xpBar"></div></div>
+  <p class="muted" id="nextLevel"></p>
+ </div>
+</div>
+<div>
+ <div class="panel"><strong>POWER-UP STORE</strong>
+  <div class="grid2" style="margin-top:10px">
+   <div class="item"><strong>✖ Remove Tile</strong><span class="muted">Remove one tile.</span><button id="buyRemove">USE CHARGE</button></div>
+   <div class="item"><strong>🔀 Shuffle</strong><span class="muted">Rearrange the board.</span><button id="buyShuffle">USE CHARGE</button></div>
+  </div>
+  <div class="row between" style="margin-top:10px"><span class="muted">Remove: <b id="removeCount">2</b></span><span class="muted">Shuffle: <b id="shuffleCount">2</b></span></div>
+  <button id="earnPower" style="margin-top:10px">+ EARN CHARGES</button>
+ </div>
+ <div class="panel"><strong>THEMES</strong><select id="themeSelect" style="width:100%;margin-top:10px"><option value="midnight">Midnight Purple</option><option value="ocean">Deep Ocean</option><option value="light">Light Mode</option><option value="emerald">Emerald</option></select></div>
+ <div class="panel"><strong>DAILY CHALLENGE</strong><p class="muted">Play a special daily puzzle and earn bonus XP.</p><span class="badge" id="dailyStatus">READY</span><button id="dailyStart" class="primary" style="width:100%;margin-top:10px">PLAY DAILY CHALLENGE</button></div>
+ <div class="panel"><strong>ACHIEVEMENTS</strong><div id="achievements" class="grid2" style="margin-top:10px"></div></div>
+ <div class="panel"><strong>LEADERBOARD</strong><div id="leaderboard" class="muted" style="margin-top:10px">No scores yet.</div></div>
+ <div class="panel"><strong>PLAYER SETTINGS</strong><p class="muted">PLAYER NAME</p><div class="row"><input id="nameInput" maxlength="16" placeholder="Your name" style="flex:1"><button id="saveName">SAVE</button></div><button id="resetProgress" style="margin-top:12px">RESET PROGRESS</button></div>
+</div>
+</div>
+<footer>2048MERGE ULTIMATE · Built for puzzle lovers</footer>
+</div>
+
+<script>
+(()=>{
+"use strict";
+const $=id=>document.getElementById(id);
+const STORE="tileverse_2048_v1",GAMEKEY=STORE+"_game",PROFILEKEY=STORE+"_profile";
+const defaults={name:"Player",xp:0,level:1,best:0,remove:2,shuffle:2,sound:true,music:false,theme:"midnight",achievements:[],leaderboard:[],dailyDone:"",games:0,totalMerges:0};
+function load(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}}
+let profile={...defaults,...load(PROFILEKEY,{})};
+let size=4,mode="classic",grid=[],score=0,seconds=60,running=false,paused=false,over=false,won=false,player=1,combo=0,undoState=null,timer=null,musicTimer=null,musicAudio=null,soundOn=profile.sound,musicOn=profile.music,removeMode=false,touchStart=null;
+const today=()=>new Date().toISOString().slice(0,10);
+function saveProfile(){profile.sound=soundOn;profile.music=musicOn;profile.theme=$("themeSelect").value;try{localStorage.setItem(PROFILEKEY,JSON.stringify(profile))}catch(e){}}
+function saveGame(){try{localStorage.setItem(GAMEKEY,JSON.stringify({grid,score,size,mode,seconds,player,combo}))}catch(e){}}
+function msg(t){$("message").textContent=t}
+function empty(){let a=[];grid.forEach((row,r)=>row.forEach((v,c)=>{if(!v)a.push([r,c])}));return a.length?a[Math.floor(Math.random()*a.length)]:null}
+function addTile(){let p=empty();if(p)grid[p[0]][p[1]]=Math.random()<.9?2:4}
+function dailyBoard(){grid=Array.from({length:4},()=>Array(4).fill(0));let seed=Number(today().replaceAll("-",""));let rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};for(let i=0;i<5;i++){let r=Math.floor(rand()*4),c=Math.floor(rand()*4);grid[r][c]=rand()<.85?2:4}}
+function newGame(){
+ stopTimer();size=mode==="daily"?4:Number($("sizeSelect").value);score=0;seconds=60;player=1;combo=0;over=false;won=false;paused=false;undoState=null;removeMode=false;
+ $("overlay").classList.remove("show");
+ if(mode==="daily")dailyBoard();else{grid=Array.from({length:size},()=>Array(size).fill(0));addTile();addTile()}
+ running=true;if(mode==="time")startTimer();
+ $("pauseBtn").textContent="Ⅱ PAUSE";$("boardBadge").textContent=size+" × "+size;
+ const names={classic:["CLASSIC MODE","Merge tiles and reach 2048."],time:["TIME ATTACK","Score as much as possible in 60 seconds."],two:["TWO PLAYER MODE","Players take turns."],daily:["DAILY CHALLENGE","Today's special puzzle."]};
+ $("modeTitle").textContent=names[mode][0];$("modeDescription").textContent=names[mode][1];
+ render();saveGame();msg("New game started!");
+}
+function render(){
+ $("board").style.gridTemplateColumns=`repeat(${size},1fr)`;$("board").innerHTML="";
+ grid.forEach(row=>row.forEach(v=>{let el=document.createElement("div");el.className="cell"+(v?" v"+v:"");if(v>2048)el.className="cell high";el.textContent=v||"";$("board").appendChild(el)}));
+ $("score").textContent=score.toLocaleString();$("best").textContent=Math.max(profile.best,score).toLocaleString();$("timer").textContent=mode==="time"?seconds+"s":"∞";
+ $("turnLabel").textContent=mode==="two"?"PLAYER "+player+"'S TURN":"YOUR TURN";$("comboLabel").textContent="Combo ×"+combo;
+ $("levelTop").textContent=profile.level;$("levelText").textContent="Level "+profile.level;$("xpText").textContent=profile.xp+" / "+(profile.level*100)+" XP";
+ $("xpBar").style.width=Math.min(100,profile.xp/(profile.level*100)*100)+"%";$("nextLevel").textContent=(profile.level*100-profile.xp)+" XP to next level";
+ $("removeCount").textContent=profile.remove;$("shuffleCount").textContent=profile.shuffle;
+ $("undoBtn").disabled=!undoState;$("soundBtn").textContent=soundOn?"🔊 SOUND ON":"🔇 SOUND OFF";$("musicBtn").textContent=musicOn?"♫ MUSIC ON":"♫ MUSIC OFF";
+ $("playerLabel").textContent=profile.name;$("nameInput").value=profile.name;$("themeSelect").value=profile.theme;
+ achievements();leaderboard();
+}
+function snapshot(){undoState={grid:grid.map(r=>r.slice()),score,player,combo,seconds}}
+function undo(){if(!undoState){msg("Nothing to undo.");return}grid=undoState.grid.map(r=>r.slice());score=undoState.score;player=undoState.player;combo=undoState.combo;seconds=undoState.seconds;undoState=null;over=false;paused=false;running=true;$("overlay").classList.remove("show");if(mode==="time")startTimer();render();saveGame();msg("Move undone.")}
+function coords(dir,i){let a=[];for(let k=0;k<size;k++){if(dir==="left")a.push([i,k]);if(dir==="right")a.push([i,size-1-k]);if(dir==="up")a.push([k,i]);if(dir==="down")a.push([size-1-k,i])}return a}
+function move(dir){
+ if(!running||paused||over)return;
+ const before=JSON.stringify(grid);snapshot();let merges=0,points=0;
+ for(let i=0;i<size;i++){let p=coords(dir,i),vals=p.map(([r,c])=>grid[r][c]).filter(Boolean),out=[];
+ for(let j=0;j<vals.length;j++){if(vals[j]===vals[j+1]){let v=vals[j]*2;out.push(v);points+=v;merges++;j++}else out.push(vals[j])}
+ while(out.length<size)out.push(0);p.forEach(([r,c],j)=>grid[r][c]=out[j])}
+ if(before===JSON.stringify(grid)){undoState=null;return}
+ if(merges){combo++;profile.totalMerges+=merges;let bonus=combo>1?combo*5:0;score+=points+bonus;addXP(Math.floor(points/2+merges*5+bonus));msg(combo>=3?"🔥 COMBO ×"+combo+"!":"Nice merge! +"+points);tone(500+combo*50,.1)}else{combo=0;msg("Good move!")}
+ addTile();if(mode==="two")player=player===1?2:1;
+ profile.best=Math.max(profile.best,score);checkAchievements();render();saveGame();
+ if(!hasMoves())finish(false);
+ if(!won&&grid.some(r=>r.includes(2048))){won=true;showResult("🏆","2048 REACHED!","You reached the 2048 tile!");unlock("2048 Master")}
+}
+function hasMoves(){if(grid.some(r=>r.includes(0)))return true;for(let r=0;r<size;r++)for(let c=0;c<size;c++){if(r<size-1&&grid[r][c]===grid[r+1][c])return true;if(c<size-1&&grid[r][c]===grid[r][c+1])return true}return false}
+function finish(timeUp){running=false;stopTimer();profile.games++;if(mode==="daily"&&profile.dailyDone!==today()){profile.dailyDone=today();addXP(100);$("dailyStatus").textContent="COMPLETED"}showResult(timeUp?"⏰":"🏁",timeUp?"TIME'S UP":"GAME OVER","Final score: "+score);profile.leaderboard.push({name:profile.name,score,mode,date:today()});profile.leaderboard.sort((a,b)=>b.score-a.score);profile.leaderboard=profile.leaderboard.slice(0,10);saveProfile();saveGame();render()}
+function showResult(icon,title,desc){$("resultIcon").textContent=icon;$("resultTitle").textContent=title;$("resultText").textContent=desc;$("overlay").classList.add("show")}
+function addXP(n){profile.xp+=Math.max(0,Math.floor(n));while(profile.xp>=profile.level*100){profile.xp-=profile.level*100;profile.level++;profile.remove++;profile.shuffle++;msg("🎉 LEVEL UP! Level "+profile.level)}saveProfile()}
+function unlock(n){if(profile.achievements.includes(n))return;profile.achievements.push(n);saveProfile();msg("🏅 Achievement unlocked: "+n)}
+const achievementList=[["First 100 Points","Score 100 points"],["Score Collector","Score 1,000 points"],["Tile Builder","Create a 128 tile"],["512 Club","Create a 512 tile"],["1024 Expert","Create a 1024 tile"],["2048 Master","Reach 2048"],["Merge Machine","Complete 50 merges"],["Dedicated Player","Play 10 games"]];
+function checkAchievements(){let m=Math.max(...grid.flat());if(score>=100)unlock("First 100 Points");if(score>=1000)unlock("Score Collector");if(m>=128)unlock("Tile Builder");if(m>=512)unlock("512 Club");if(m>=1024)unlock("1024 Expert");if(profile.totalMerges>=50)unlock("Merge Machine");if(profile.games>=10)unlock("Dedicated Player")}
+function achievements(){$("achievements").innerHTML="";achievementList.forEach(([n,d])=>{let e=document.createElement("div");e.className="item";e.innerHTML="<strong>"+(profile.achievements.includes(n)?"🏆":"🔒")+" "+n+"</strong><span class='muted'>"+d+"</span>";$("achievements").appendChild(e)})}
+function leaderboard(){$("leaderboard").innerHTML="";if(!profile.leaderboard.length){$("leaderboard").textContent="No scores yet.";return}profile.leaderboard.slice(0,5).forEach((x,i)=>{let d=document.createElement("div");d.className="row between";let a=document.createElement("span");a.textContent=(i+1)+". "+x.name+" · "+x.mode;let b=document.createElement("b");b.textContent=x.score.toLocaleString();d.append(a,b);$("leaderboard").appendChild(d)})}
+function startTimer(){stopTimer();seconds=60;timer=setInterval(()=>{if(!running||paused)return;seconds--;$("timer").textContent=seconds+"s";if(seconds<=0)finish(true)},1000)}
+function stopTimer(){if(timer)clearInterval(timer);timer=null}
+function pause(){if(!running||over)return;paused=!paused;$("pauseBtn").textContent=paused?"▶ RESUME":"Ⅱ PAUSE";msg(paused?"Game paused.":"Game resumed.")}
+function hint(){if(!running||paused||over)return;for(let d of ["left","right","up","down"]){let old=grid.map(r=>r.slice());let before=JSON.stringify(grid);let fake=grid.map(r=>r.slice());let changed=false;for(let i=0;i<size;i++){let p=coords(d,i),v=p.map(([r,c])=>fake[r][c]).filter(Boolean),o=[];for(let j=0;j<v.length;j++){if(v[j]===v[j+1]){o.push(v[j]*2);j++}else o.push(v[j])}while(o.length<size)o.push(0);p.forEach(([r,c],j)=>fake[r][c]=o[j])}if(JSON.stringify(fake)!==before){msg("💡 Try swiping "+d.toUpperCase());return}}}
+function removeTile(){if(!running||paused||over)return;if(profile.remove<=0){msg("No remove charges available.");return}removeMode=true;msg("Tap a tile to remove it.")}
+$("board").addEventListener("click",e=>{if(!removeMode)return;let cell=e.target.closest(".cell");if(!cell)return;let index=[...$("board").children].indexOf(cell),r=Math.floor(index/size),c=index%size;if(!grid[r][c]){msg("Choose a numbered tile.");return}snapshot();grid[r][c]=0;profile.remove--;removeMode=false;addTile();render();saveProfile();saveGame();msg("Tile removed!")});
+function shuffle(){if(!running||paused||over)return;if(profile.shuffle<=0){msg("No shuffle charges available.");return}snapshot();let v=grid.flat().filter(Boolean);for(let i=v.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[v[i],v[j]]=[v[j],v[i]]}grid=Array.from({length:size},()=>Array(size).fill(0));let n=0;for(let r=0;r<size;r++)for(let c=0;c<size;c++)if(n<v.length)grid[r][c]=v[n++];profile.shuffle--;render();saveProfile();saveGame();msg("Board shuffled!")}
+function tone(f,d){if(!soundOn)return;try{let C=window.AudioContext||window.webkitAudioContext,c=new C(),o=c.createOscillator(),g=c.createGain();o.frequency.value=f;g.gain.setValueAtTime(.07,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+d);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+d);o.onended=()=>c.close()}catch(e){}}
+function stopMusic(){if(musicTimer)clearInterval(musicTimer);musicTimer=null;if(musicAudio){musicAudio.close().catch(()=>{});musicAudio=null}}
+function startMusic(){stopMusic();if(!musicOn)return;try{let C=window.AudioContext||window.webkitAudioContext;musicAudio=new C();let notes=[130.81,164.81,196,164.81,146.83,174.61,220,174.61],i=0;musicTimer=setInterval(()=>{if(paused||over)return;let o=musicAudio.createOscillator(),g=musicAudio.createGain();o.type="sine";o.frequency.value=notes[i++%notes.length];g.gain.setValueAtTime(.015,musicAudio.currentTime);g.gain.exponentialRampToValueAtTime(.001,musicAudio.currentTime+.7);o.connect(g);g.connect(musicAudio.destination);o.start();o.stop(musicAudio.currentTime+.7)},700)}catch(e){}}
+function applyTheme(){let t=$("themeSelect").value,sets={midnight:["#090d19","#121a2b","#1b2740","#9b7cff"],ocean:["#06141e","#102633","#18394c","#45c6e9"],light:["#e9edf6","#fff","#dce4f2","#7255d8"],emerald:["#071710","#10251d","#1b3b2d","#4ce0a0"]},v=sets[t]||sets.midnight;["--bg","--panel","--panel2","--accent"].forEach((k,i)=>document.documentElement.style.setProperty(k,v[i]));document.body.style.color=t==="light"?"#172036":"#f4f6ff";saveProfile()}
+function restore(){let s=load(GAMEKEY,null);if(!s||!Array.isArray(s.grid))return false;grid=s.grid;size=s.size||4;mode=s.mode||"classic";score=s.score||0;seconds=s.seconds||60;player=s.player||1;combo=s.combo||0;running=true;document.querySelectorAll("[data-mode]").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));$("sizeSelect").value=size;if(mode==="time")startTimer();$("boardBadge").textContent=size+" × "+size;render();return true}
+document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{mode=b.dataset.mode;if(mode==="daily")$("sizeSelect").value="4";document.querySelectorAll("[data-mode]").forEach(x=>x.classList.toggle("active",x===b));newGame()});
+$("newGame").onclick=$("restartBtn").onclick=$("playAgain").onclick=newGame;
+$("undoBtn").onclick=undo;$("hintBtn").onclick=hint;$("removeBtn").onclick=$("buyRemove").onclick=removeTile;$("shuffleBtn").onclick=$("buyShuffle").onclick=shuffle;
+$("earnPower").onclick=()=>{profile.remove++;profile.shuffle++;saveProfile();render();msg("You earned one charge of each power-up!")};
+$("pauseBtn").onclick=pause;
+$("soundBtn").onclick=()=>{soundOn=!soundOn;saveProfile();render();if(soundOn)tone(600,.1)};
+$("musicBtn").onclick=()=>{musicOn=!musicOn;saveProfile();if(musicOn)startMusic();else stopMusic();render()};
+$("themeSelect").onchange=applyTheme;
+$("dailyStart").onclick=()=>{mode="daily";document.querySelectorAll("[data-mode]").forEach(b=>b.classList.toggle("active",b.dataset.mode==="daily"));newGame()};
+$("saveName").onclick=()=>{let n=$("nameInput").value.trim().slice(0,16);if(n)profile.name=n;saveProfile();render();msg("Name saved!")};
+$("resetProgress").onclick=()=>{if(confirm("Reset all saved progress?")){localStorage.removeItem(PROFILEKEY);localStorage.removeItem(GAMEKEY);profile={...defaults};soundOn=true;musicOn=false;stopMusic();applyTheme();newGame();render()}};
+document.addEventListener("keydown",e=>{let m={ArrowLeft:"left",ArrowRight:"right",ArrowUp:"up",ArrowDown:"down"};if(m[e.key]){e.preventDefault();move(m[e.key])}});
+$("board").addEventListener("touchstart",e=>{let t=e.changedTouches[0];touchStart={x:t.clientX,y:t.clientY}},{passive:true});
+$("board").addEventListener("touchend",e=>{if(!touchStart)return;let t=e.changedTouches[0],dx=t.clientX-touchStart.x,dy=t.clientY-touchStart.y;if(Math.max(Math.abs(dx),Math.abs(dy))>25){if(Math.abs(dx)>Math.abs(dy))move(dx>0?"right":"left");else move(dy>0?"down":"up")}touchStart=null},{passive:true});
+window.addEventListener("beforeunload",()=>{saveGame();saveProfile()});
+applyTheme();$("dailyStatus").textContent=profile.dailyDone===today()?"COMPLETED":"READY";
+if(!restore())newGame();if(musicOn)startMusic();render();
+
+// Splash screen: show progress, then reveal the start button.
+let progress=0;
+const loading=setInterval(()=>{
+ progress=Math.min(100,progress+5);
+ $("loadingText").textContent="LOADING "+progress+"%";
+ if(progress>=100){
+  clearInterval(loading);
+  $("loadingText").textContent="READY TO PLAY";
+  $("enterGame").style.display="inline-block";
+ }
+},75);
+$("enterGame").onclick=()=>{
+ $("mainApp").style.visibility="visible";
+ $("splash").classList.add("hide");
+};
+})();
+</script>
+</body>
+</html>
